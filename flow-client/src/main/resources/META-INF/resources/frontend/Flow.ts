@@ -54,7 +54,7 @@ const $wnd = window as any;
  */
 export class Flow {
   config: FlowConfig;
-  response!: AppInitResponse;
+  response?: AppInitResponse = undefined;
   pathname = '';
 
   // @ts-ignore
@@ -117,11 +117,26 @@ export class Flow {
       // Store last action pathname so as we can check it in events
       this.pathname = params.pathname;
 
-      await this.flowInit();
-      // When an action happens, navigation will be resolved `onBeforeEnter`
-      this.container.onBeforeEnter = (ctx, cmd) => this.flowNavigate(ctx, cmd);
-      // For covering the 'server -> client' use case
-      this.container.onBeforeLeave = (ctx, cmd) => this.flowLeave(ctx, cmd);
+      if (navigator.onLine) {
+        // @ts-ignore
+        await this.flowInit();
+
+        // When an action happens, navigation will be resolved `onBeforeEnter`
+        this.container.onBeforeEnter = (ctx, cmd) => this.flowNavigate(ctx, cmd);
+        // For covering the 'server -> client' use case
+        this.container.onBeforeLeave = (ctx, cmd) => this.flowLeave(ctx, cmd);
+      } else {
+        // insert an offline stub
+        await import('./OfflineStub');
+        this.container = document.createElement('vaadin-offline-stub');
+        this.response = undefined;
+        document.body.appendChild(this.container);
+      }
+
+      // // When an action happens, navigation will be resolved `onBeforeEnter`
+      // this.container.onBeforeEnter = (ctx, cmd) => this.flowNavigate(ctx, cmd);
+      // // For covering the 'server -> client' use case
+      // this.container.onBeforeLeave = (ctx, cmd) => this.flowLeave(ctx, cmd);
       return this.container;
     }
   }
