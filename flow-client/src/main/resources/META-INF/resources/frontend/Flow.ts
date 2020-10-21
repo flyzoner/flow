@@ -120,11 +120,6 @@ export class Flow {
       if (navigator.onLine) {
         // @ts-ignore
         await this.flowInit();
-
-        // When an action happens, navigation will be resolved `onBeforeEnter`
-        this.container.onBeforeEnter = (ctx, cmd) => this.flowNavigate(ctx, cmd);
-        // For covering the 'server -> client' use case
-        this.container.onBeforeLeave = (ctx, cmd) => this.flowLeave(ctx, cmd);
       } else {
         // insert an offline stub
         await import('./OfflineStub');
@@ -133,10 +128,10 @@ export class Flow {
         document.body.appendChild(this.container);
       }
 
-      // // When an action happens, navigation will be resolved `onBeforeEnter`
-      // this.container.onBeforeEnter = (ctx, cmd) => this.flowNavigate(ctx, cmd);
-      // // For covering the 'server -> client' use case
-      // this.container.onBeforeLeave = (ctx, cmd) => this.flowLeave(ctx, cmd);
+      // When an action happens, navigation will be resolved `onBeforeEnter`
+      this.container.onBeforeEnter = (ctx, cmd) => this.flowNavigate(ctx, cmd);
+      // For covering the 'server -> client' use case
+      this.container.onBeforeLeave = (ctx, cmd) => this.flowLeave(ctx, cmd);
       return this.container;
     }
   }
@@ -148,8 +143,8 @@ export class Flow {
       ctx: NavigationParameters,
       cmd?: PreventCommands): Promise<any> {
 
-    // server -> server
-    if (this.pathname === ctx.pathname) {
+    // server -> server or at the offline page
+    if (this.pathname === ctx.pathname || this.response === undefined) {
       return Promise.resolve({});
     }
     // 'server -> client'
@@ -169,25 +164,29 @@ export class Flow {
   // Send the remote call to `JavaScriptBootstrapUI` to render the flow
   // route specified by the context
   private async flowNavigate(ctx: NavigationParameters, cmd?: PreventAndRedirectCommands): Promise<HTMLElement> {
-    return new Promise(resolve => {
-      this.showLoading()
-      // The callback to run from server side once the view is ready
-      this.container.serverConnected = (cancel, redirectContext?: NavigationParameters) => {
-        if (cmd && cancel) {
-          resolve(cmd.prevent());
-        } else if (cmd && cmd.redirect && redirectContext) {
-          resolve(cmd.redirect(redirectContext.pathname));
-        } else {
-          this.container.style.display = '';
-          resolve(this.container);
-        }
-        this.hideLoading();
-      };
+    if (navigator.onLine) {
+      return new Promise(resolve => {
+        this.showLoading()
+        // The callback to run from server side once the view is ready
+        this.container.serverConnected = (cancel, redirectContext?: NavigationParameters) => {
+          if (cmd && cancel) {
+            resolve(cmd.prevent());
+          } else if (cmd && cmd.redirect && redirectContext) {
+            resolve(cmd.redirect(redirectContext.pathname));
+          } else {
+            this.container.style.display = '';
+            resolve(this.container);
+          }
+          this.hideLoading();
+        };
 
-      // Call server side to navigate to the given route
-      flowRoot.$server
-          .connectClient(this.container.localName, this.container.id, this.getFlowRoute(ctx), this.appShellTitle);
-    });
+        // Call server side to navigate to the given route
+        flowRoot.$server
+            .connectClient(this.container.localName, this.container.id, this.getFlowRoute(ctx), this.appShellTitle);
+      });
+    } else {
+      return Promise.resolve(this.container);
+    }
   }
 
   private getFlowRoute(context: NavigationParameters | Location): string {
