@@ -119,13 +119,15 @@ export class Flow {
 
       if (navigator.onLine) {
         // @ts-ignore
-        await this.flowInit();
+        try {
+          await this.flowInit();
+        } catch(error) {
+          // error initializing Flow: show offline stub
+          await this.showOfflineStub();
+        }
       } else {
         // insert an offline stub
-        await import('./OfflineStub');
-        this.container = document.createElement('vaadin-offline-stub');
-        this.response = undefined;
-        document.body.appendChild(this.container);
+        await this.showOfflineStub();
       }
 
       // When an action happens, navigation will be resolved `onBeforeEnter`
@@ -164,7 +166,7 @@ export class Flow {
   // Send the remote call to `JavaScriptBootstrapUI` to render the flow
   // route specified by the context
   private async flowNavigate(ctx: NavigationParameters, cmd?: PreventAndRedirectCommands): Promise<HTMLElement> {
-    if (navigator.onLine) {
+    if (this.response) {
       return new Promise(resolve => {
         this.showLoading()
         // The callback to run from server side once the view is ready
@@ -185,6 +187,7 @@ export class Flow {
             .connectClient(this.container.localName, this.container.id, this.getFlowRoute(ctx), this.appShellTitle);
       });
     } else {
+      // No server response => offline or erroneous connection
       return Promise.resolve(this.container);
     }
   }
@@ -411,5 +414,12 @@ export class Flow {
         loading.setAttribute('style', 'none');
       }
     };
+  }
+
+  private async showOfflineStub() {
+    await import('./OfflineStub');
+    this.container = document.createElement('vaadin-offline-stub');
+    this.response = undefined;
+    document.body.appendChild(this.container);
   }
 }

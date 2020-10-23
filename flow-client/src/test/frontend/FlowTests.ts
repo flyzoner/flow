@@ -597,28 +597,50 @@ suite("Flow", () => {
     await route.action({pathname: "Foo/Bar.baz", search:""});
   });
 
-  test("should return offline stub when navigating to server view", async () => {
-      stubServerRemoteFunction('foobar-123');
-      Object.defineProperty(window.navigator, 'onLine', {
-          value: false,
-          configurable: true
-      });
-      const flow = new Flow();
-      const route = flow.serverSideRoutes[0];
-      const params: NavigationParameters = {
-          pathname: 'Foo/Bar.baz',
-          search: ''
-      };
-      const view = await route.action(params);
-      assert.equal(view.tagName, 'VAADIN-OFFLINE-STUB');
+  test("should show stub when navigating to server view offline", async () => {
+    stubServerRemoteFunction('foobar-123');
+    Object.defineProperty(window.navigator, 'onLine', {
+      value: false,
+      configurable: true
+    });
+    const flow = new Flow();
+    const route = flow.serverSideRoutes[0];
+    const params: NavigationParameters = {
+      pathname: 'Foo/Bar.baz',
+      search: ''
+    };
+    const view = await route.action(params);
+    assert.equal(view.tagName, 'VAADIN-OFFLINE-STUB');
 
-      // @ts-ignore
-      let onBeforeEnterReturns = await view.onBeforeEnter(params, {});
-      assert.equal(view, onBeforeEnterReturns);
+    // @ts-ignore
+    let onBeforeEnterReturns = await view.onBeforeEnter(params, {});
+    assert.equal(view, onBeforeEnterReturns);
 
-      // @ts-ignore
-      let onBeforeLeaveReturns = await view.onBeforeLeave(params, {});
-      assert.deepEqual({}, onBeforeLeaveReturns);
+    // @ts-ignore
+    let onBeforeLeaveReturns = await view.onBeforeLeave(params, {});
+    assert.deepEqual({}, onBeforeLeaveReturns);
+  });
+
+  test("should show stub when navigating to server view and Flow initialization fails", async () => {
+    mock.get(/^.*\?v-r=init.*/, (_, __) => {
+      throw new Error("unable to connect");
+    });
+    const flow = new Flow();
+    const route = flow.serverSideRoutes[0];
+    const params: NavigationParameters = {
+      pathname: 'Foo/Bar.baz',
+      search: ''
+    };
+    const view = await route.action(params);
+    assert.equal(view.tagName, 'VAADIN-OFFLINE-STUB');
+
+    // @ts-ignore
+    let onBeforeEnterReturns = await view.onBeforeEnter(params, {});
+    assert.equal(view, onBeforeEnterReturns);
+
+    // @ts-ignore
+    let onBeforeLeaveReturns = await view.onBeforeLeave(params, {});
+    assert.deepEqual({}, onBeforeLeaveReturns);
   });
 });
 
