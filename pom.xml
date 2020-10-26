@@ -493,7 +493,11 @@
                         <reuseForks>false</reuseForks>
                         <excludes>
                             <exclude>${exclude.windows.failed.tests}</exclude>
+                            <exclude>*</exclude>
                         </excludes>
+                        <includes>
+                            <include>PwaTestIT</include>
+                        </includes>
                     </configuration>
                 </plugin>
                 <plugin>
