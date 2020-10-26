@@ -122,8 +122,10 @@ export class Flow {
         try {
           await this.flowInit();
         } catch(error) {
-          // error initializing Flow: show offline stub
-          await this.showOfflineStub();
+          if (error instanceof FlowUiInitializationError) {
+            // error initializing Flow: show offline stub
+            await this.showOfflineStub();
+          }
         }
       } else {
         // insert an offline stub
@@ -307,7 +309,7 @@ export class Flow {
 
       httpRequest.open('GET', requestPath);
 
-      httpRequest.onerror = () => reject(new Error(
+      httpRequest.onerror = () => reject(new FlowUiInitializationError(
           `Invalid server response when initializing Flow UI.
         ${httpRequest.status}
         ${httpRequest.responseText}`));
@@ -421,5 +423,12 @@ export class Flow {
     this.container = document.createElement('vaadin-offline-stub');
     this.response = undefined;
     document.body.appendChild(this.container);
+  }
+}
+
+/* tslint:disable: max-classes-per-file */
+class FlowUiInitializationError extends Error {
+  constructor(message: any) {
+    super(message);
   }
 }

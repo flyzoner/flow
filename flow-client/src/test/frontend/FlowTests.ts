@@ -622,7 +622,7 @@ suite("Flow", () => {
   });
 
   test("should show stub when navigating to server view and Flow initialization fails", async () => {
-    mock.get(/^.*\?v-r=init.*/, (_, __) => {
+    mock.get(/^.*\?v-r=init.*/, () => {
       throw new Error("unable to connect");
     });
     const flow = new Flow();
